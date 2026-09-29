@@ -33,7 +33,7 @@ public sealed class HistoryStore
 public sealed class NotificationService
 {
     private readonly System.Windows.Forms.NotifyIcon _trayIcon;
-    private bool _warned20, _warned10, _warnedLowTime, _warnedMismatch, _warnedLowHealth;
+    private bool _warned20, _warned10, _warnedLowTime, _warnedMismatch, _warnedLowHealth, _warnedGauge;
 
     public NotificationService(System.Windows.Forms.NotifyIcon trayIcon)
     {
@@ -51,6 +51,15 @@ public sealed class NotificationService
         _trayIcon.BalloonTipText = message;
         _trayIcon.ShowBalloonTip(6000);
     }
+
+    public void NotifyGaugeWarning(string reason)
+    {
+        if (_warnedGauge) return; // one alert per suspicious episode
+        _warnedGauge = true;
+        Notify("Battery gauge looks unreliable", reason);
+    }
+
+    public void ResetGaugeWarning() => _warnedGauge = false;
 
     public void EvaluateAndNotify(Models.BatterySnapshot snap, AppSettings settings)
     {
