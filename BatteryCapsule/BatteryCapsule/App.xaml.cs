@@ -220,10 +220,11 @@ public partial class App : Application
 
             // Graph the best percentage we have, so the "over time" chart works
             // even where no independent estimate exists.
-            _history!.Add(new HistoryPoint(DateTime.UtcNow,
-                snap.EstimatedPercent ?? snap.CalculatedPercent ??
-                    (snap.WindowsReportedPercent.HasValue ? (double)snap.WindowsReportedPercent.Value : null),
-                snap.PowerW));
+            double? graphPercent = snap.EstimatedPercent ?? snap.CalculatedPercent;
+            graphPercent ??= snap.WindowsReportedPercent.HasValue
+                ? (double?)snap.WindowsReportedPercent.Value
+                : null;
+            _history!.Add(new HistoryPoint(DateTime.UtcNow, graphPercent, snap.PowerW));
 
             _notifications?.EvaluateAndNotify(snap, _settingsService!.Current);
 
