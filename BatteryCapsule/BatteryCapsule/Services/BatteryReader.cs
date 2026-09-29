@@ -302,14 +302,20 @@ public sealed class BatteryReader : IDisposable
     {
         if (info.DesignedCapacityMWh.HasValue && info.FullChargedCapacityMWh.HasValue &&
             info.RemainingCapacityMWh.HasValue && info.ChargeState != ChargeState.Unknown)
+        {
+            LastWmiSummary = "not needed (IOCTL complete)";
             return; // nothing missing
+        }
 
         try
         {
             using var searcher = new ManagementObjectSearcher(
                 "SELECT EstimatedChargeRemaining, DesignCapacity, FullChargeCapacity, BatteryStatus, Chemistry FROM Win32_Battery");
+            int instances = 0;
+            string detail = "no instances";
             foreach (ManagementObject mo in searcher.Get())
             {
+                instances++;
                 uint? design = ToUInt(mo["DesignCapacity"]);
                 uint? full = ToUInt(mo["FullChargeCapacity"]);
                 uint? pct = ToUInt(mo["EstimatedChargeRemaining"]);
@@ -327,11 +333,21 @@ public sealed class BatteryReader : IDisposable
                     string? chem = MapWmiChemistry(ToUInt(mo["Chemistry"]));
                     if (chem != null) info.Chemistry = chem;
                 }
+                detail = $"estRemaining={pct?.ToString() ?? "null"}, design={design?.ToString() ?? "null"}, " +
+                         $"full={full?.ToString() ?? "null"}, status={ToUInt(mo["BatteryStatus"])?.ToString() ?? "null"}";
                 break; // first battery is enough
             }
+            LastWmiSummary = $"instances={instances}, {detail}";
         }
-        catch { /* WMI unavailable - gaps stay Unavailable, UI shows N/A honestly */ }
+        catch (Exception ex)
+        {
+            LastWmiSummary = $"query failed: {ex.GetType().Name}";
+            /* WMI unavailable - gaps stay Unavailable, UI shows N/A honestly */
+        }
     }
+
+    /// <summary>What the last WMI fallback attempt found, for diagnostics.</summary>
+    public static string LastWmiSummary { get; private set; } = "not attempted";
 
     private static uint? ToUInt(object? v)
     {
