@@ -88,8 +88,8 @@ public partial class CapsuleWindow : Window
             : (SolidColorBrush)app.Resources["CapsuleTextDark"];
 
         CloseButton.Foreground = light
-            ? new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66))
-            : new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA));
+            ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0x66, 0x66))
+            : new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xAA, 0xAA, 0xAA));
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
