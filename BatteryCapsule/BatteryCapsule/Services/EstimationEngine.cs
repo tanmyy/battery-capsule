@@ -1,4 +1,5 @@
 using BatteryCapsule.Models;
+using PowerLineStatus = BatteryCapsule.Models.PowerLineStatus;
 
 namespace BatteryCapsule.Services;
 
@@ -55,7 +56,7 @@ public sealed class EstimationEngine
 
         // Voltage: report the average of batteries that have a reading (not physically summed).
         var voltages = present.Where(b => b.VoltageMV.HasValue).Select(b => b.VoltageMV!.Value).ToList();
-        double? voltageV = voltages.Count == 0 ? null : voltages.Average() / 1000.0;
+        double? voltageV = voltages.Count == 0 ? null : voltages.Average(v => (double)v) / 1000.0;
 
         // Power/rate: sum across batteries (total system draw), signed (negative = discharging).
         var rates = present.Where(b => b.RateMW.HasValue).Select(b => b.RateMW!.Value).ToList();
