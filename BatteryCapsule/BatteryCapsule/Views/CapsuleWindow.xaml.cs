@@ -3,6 +3,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using BatteryCapsule.Models;
 using Microsoft.Win32;
+using Point = System.Windows.Point;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
 namespace BatteryCapsule.Views;
 
