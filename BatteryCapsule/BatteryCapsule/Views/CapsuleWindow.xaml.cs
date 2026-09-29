@@ -137,7 +137,8 @@ public partial class CapsuleWindow : Window
                     : " · N/A";
         }
 
-        IconText.Text = snap.ChargeState is ChargeState.Charging or ChargeState.Full ? "⚡" : "🔋";
+        IconText.Text = snap.ReportedLooksInconsistent ? "⚠️"
+            : snap.ChargeState is ChargeState.Charging or ChargeState.Full ? "⚡" : "🔋";
         MainText.Text = pctText + timeText;
     }
 
