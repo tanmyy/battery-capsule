@@ -115,7 +115,10 @@ public partial class CapsuleWindow : Window
             return;
         }
 
-        int? pct = settings.ShowEstimatedPercent ? (snap.EstimatedPercent ?? snap.CalculatedPercent)
+        // Pill fallback: if our own estimate can't be computed (some firmware only
+        // exposes the percentage), show Windows' number rather than a dead "N/A".
+        // The expanded panel always labels which number is which.
+        int? pct = settings.ShowEstimatedPercent ? (snap.EstimatedPercent ?? snap.CalculatedPercent ?? snap.WindowsReportedPercent)
                                                   : snap.WindowsReportedPercent;
         string pctText = pct.HasValue ? $"{pct.Value}%" : "N/A";
 
