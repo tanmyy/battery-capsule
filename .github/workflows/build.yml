@@ -1,0 +1,22 @@
+name: Build BatteryCapsule
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish single-file exe
+        run: dotnet publish BatteryCapsule/BatteryCapsule/BatteryCapsule.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - name: Upload exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BatteryCapsule-win-x64
+          path: publish/BatteryCapsule.exe
