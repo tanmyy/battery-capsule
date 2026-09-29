@@ -48,10 +48,17 @@ public partial class ExpandedPanelWindow : Window
         if (!snap.BatteryPresent)
         {
             EstPercentText.Text = "N/A";
-            WinPercentText.Text = "No battery detected";
+            // Be honest: this branch means the direct battery telemetry wasn't found.
+            // If Windows itself still reports a percentage, show it instead of
+            // claiming Windows detected nothing.
+            WinPercentText.Text = snap.WindowsReportedPercent.HasValue
+                ? $"{snap.WindowsReportedPercent.Value}%"
+                : "No battery detected";
             ConsistencyBanner.Visibility = Visibility.Collapsed;
             MetricsPanel.Children.Clear();
-            AddRow("Status", "This device has no battery");
+            AddRow("Status", snap.WindowsReportedPercent.HasValue
+                ? "Battery telemetry unavailable - showing Windows reported % only"
+                : "This device has no battery");
             return;
         }
 
