@@ -16,7 +16,9 @@ public sealed class BatteryReader : IDisposable
 {
     // {72631E54-78A4-11D0-BC7F-00AA00B7B32A} - GUID_DEVICEINTERFACE_BATTERY
     private static readonly Guid GUID_DEVICEINTERFACE_BATTERY =
-        new("72631e54-78a4-11d0-bc7f-00aa00b7b32a");
+        // NOTE: exact value from Microsoft's batclass.h - every hex digit matters;
+        // a single transposed digit makes battery enumeration silently find nothing.
+        new("72631e54-78a4-11d0-bcf7-00aa00b92a2f");
 
     private const int DIGCF_PRESENT = 0x02;
     private const int DIGCF_DEVICEINTERFACE = 0x10;
