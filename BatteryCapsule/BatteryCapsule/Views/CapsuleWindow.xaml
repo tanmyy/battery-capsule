@@ -24,6 +24,11 @@
             <TextBlock x:Name="IconText" Text="🔋" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
             <TextBlock x:Name="MainText" Text="--% · --" FontSize="13" FontFamily="Segoe UI Semibold"
                        Foreground="#FFF2F2F2" VerticalAlignment="Center"/>
+            <Button x:Name="CloseButton" Content="✕" Click="CloseButton_Click"
+                    Background="Transparent" BorderBrush="Transparent" BorderThickness="0"
+                    Foreground="#99FFFFFF" FontSize="10" Padding="2,0,0,0" Margin="8,0,0,0"
+                    Cursor="Hand" VerticalAlignment="Center" Focusable="False"
+                    ToolTip="Close Battery Capsule"/>
         </StackPanel>
     </Border>
 </Window>
