@@ -1,7 +1,7 @@
+using System.Management;
 using System.Runtime.InteropServices;
 using BatteryCapsule.Models;
 using PowerLineStatus = BatteryCapsule.Models.PowerLineStatus;
-
 namespace BatteryCapsule.Services;
 
 /// <summary>
@@ -191,7 +191,11 @@ public sealed class BatteryReader : IDisposable
                 if (path == null) continue;
 
                 var info = ReadOneBattery(path);
-                if (info != null) results.Add(info);
+                if (info != null)
+                {
+                    FillGapsFromWmi(info);
+                    results.Add(info);
+                }
             }
         }
         finally
@@ -287,6 +291,71 @@ public sealed class BatteryReader : IDisposable
 
         return info;
     }
+
+    /// <summary>
+    /// WMI fallback: fills capacity/state fields the IOCTL path couldn't read.
+    /// Win32_Battery is populated from the same driver data Windows' own battery UI
+    /// uses, so values filled here are still Measured, never guessed. Only runs when
+    /// the IOCTL path left gaps, so systems where IOCTL works pay no WMI cost.
+    /// </summary>
+    private static void FillGapsFromWmi(RawBatteryInfo info)
+    {
+        if (info.DesignedCapacityMWh.HasValue && info.FullChargedCapacityMWh.HasValue &&
+            info.RemainingCapacityMWh.HasValue && info.ChargeState != ChargeState.Unknown)
+            return; // nothing missing
+
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT EstimatedChargeRemaining, DesignCapacity, FullChargeCapacity, BatteryStatus, Chemistry FROM Win32_Battery");
+            foreach (ManagementObject mo in searcher.Get())
+            {
+                uint? design = ToUInt(mo["DesignCapacity"]);
+                uint? full = ToUInt(mo["FullChargeCapacity"]);
+                uint? pct = ToUInt(mo["EstimatedChargeRemaining"]);
+
+                info.DesignedCapacityMWh ??= design;
+                info.FullChargedCapacityMWh ??= full;
+                if (!info.RemainingCapacityMWh.HasValue && pct.HasValue && full.HasValue && full.Value > 0)
+                    info.RemainingCapacityMWh = (uint)Math.Round(full.Value * pct.Value / 100.0);
+
+                if (info.ChargeState == ChargeState.Unknown)
+                    info.ChargeState = MapWmiBatteryStatus(ToUInt(mo["BatteryStatus"]));
+
+                if (string.IsNullOrEmpty(info.Chemistry))
+                {
+                    string? chem = MapWmiChemistry(ToUInt(mo["Chemistry"]));
+                    if (chem != null) info.Chemistry = chem;
+                }
+                break; // first battery is enough
+            }
+        }
+        catch { /* WMI unavailable - gaps stay Unavailable, UI shows N/A honestly */ }
+    }
+
+    private static uint? ToUInt(object? v)
+    {
+        if (v == null) return null;
+        try { return Convert.ToUInt32(v); }
+        catch { return null; }
+    }
+
+    private static ChargeState MapWmiBatteryStatus(uint? status) => status switch
+    {
+        3 => ChargeState.Full,                                    // Fully Charged
+        6 or 7 or 8 or 9 => ChargeState.Charging,                 // Charging*
+        _ => ChargeState.Unknown                                  // anything else: don't guess
+    };
+
+    private static string? MapWmiChemistry(uint? chemistry) => chemistry switch
+    {
+        3 => "PbAc",   // Lead Acid
+        4 => "NiCd",   // Nickel Cadmium
+        5 => "NiMH",   // Nickel Metal Hydride
+        6 => "Li-ion", // Lithium-ion
+        8 => "Li-poly",// Lithium Polymer
+        _ => null
+    };
 
     private uint QueryTag(SafeFileHandleWrapper handle)
     {
