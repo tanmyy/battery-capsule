@@ -51,7 +51,7 @@ public partial class App : Application
         {
             LogCrash("DispatcherUnhandledException", args.Exception);
             args.Handled = true;
-            MessageBox.Show("Battery Capsule ran into a problem on startup.\nDetails saved to:\n" + CrashLogPath,
+            System.Windows.MessageBox.Show("Battery Capsule ran into a problem on startup.\nDetails saved to:\n" + CrashLogPath,
                 "Battery Capsule", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
         };
@@ -63,7 +63,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             LogCrash("OnStartup", ex);
-            MessageBox.Show("Battery Capsule could not start.\nDetails saved to:\n" + CrashLogPath,
+            System.Windows.MessageBox.Show("Battery Capsule could not start.\nDetails saved to:\n" + CrashLogPath,
                 "Battery Capsule", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
         }
