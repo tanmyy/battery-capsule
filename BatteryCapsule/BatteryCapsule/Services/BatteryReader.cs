@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using BatteryCapsule.Models;
+using PowerLineStatus = BatteryCapsule.Models.PowerLineStatus;
 
 namespace BatteryCapsule.Services;
 
