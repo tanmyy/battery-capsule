@@ -14,7 +14,7 @@ public partial class App : Application
     /// Bump on every user-facing build so a diagnostics log always identifies
     /// exactly which build produced it.
     /// </summary>
-    public const string BuildTag = "2026-09-29-wmi2";
+    public const string BuildTag = "2026-09-29-watchdog1";
     // --- Win32 GetSystemPowerStatus: the same call Windows' own taskbar battery icon
     // uses, so "WindowsReportedPercent" in the UI is genuinely what Windows itself shows. ---
     [StructLayout(LayoutKind.Sequential)]
@@ -39,12 +39,14 @@ public partial class App : Application
     private HistoryStore? _history;
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private NotificationService? _notifications;
+    private GaugeWatchdog? _watchdog;
 
     public CapsuleWindow? Capsule { get; private set; }
     public BatterySnapshot? LatestSnapshot { get; private set; }
     public HistoryStore History => _history!;
     public SettingsService Settings => _settingsService!;
     public EstimationEngine Engine => _engine!;
+    public GaugeWatchdog Watchdog => _watchdog!;
 
     public event Action<BatterySnapshot>? SnapshotUpdated;
 
@@ -132,9 +134,20 @@ public partial class App : Application
         _reader = new BatteryReader();
         _engine = new EstimationEngine();
         _history = new HistoryStore(sampleEverySeconds: _settingsService.Current.UpdateFrequencySeconds);
+        _watchdog = new GaugeWatchdog();
+        _watchdog.OnStartup();
 
         SetupTrayIcon();
         _notifications = new NotificationService(_trayIcon!);
+
+        if (_watchdog.DeathRecordedThisStartup &&
+            _settingsService.Current.NotificationsEnabled &&
+            _settingsService.Current.NotifyGaugeWarnings &&
+            _watchdog.LatestDeath is { } death)
+        {
+            _notifications.Notify($"Laptop died at a reported {death.ReportedPercent}%",
+                "Power was lost while the gauge claimed plenty of charge. Your battery gauge may be unreliable.");
+        }
 
         Capsule = new CapsuleWindow();
         Capsule.Show();
@@ -165,9 +178,11 @@ public partial class App : Application
             var snap = _engine!.Evaluate(raw);
 
             int? windowsPercent = null;
+            bool onAcPower = false;
             if (GetSystemPowerStatus(out var status) && status.BatteryFlag != 128 /* 128 = no system battery */)
             {
                 windowsPercent = status.BatteryLifePercent <= 100 ? status.BatteryLifePercent : (int?)null;
+                onAcPower = status.ACLineStatus == 1;
             }
 
             bool inconsistent = false;
@@ -175,6 +190,23 @@ public partial class App : Application
             if (snap.BatteryPresent)
             {
                 (inconsistent, reason) = _engine.CheckConsistency(windowsPercent, snap.CalculatedPercent, snap.ChargeState);
+
+                // Gauge watchdog: catches the reported % lying (impossible drops,
+                // recalibration jumps, plugged-in drops). This is the only
+                // dishonesty detectable when firmware hides all telemetry.
+                var (gaugeSus, gaugeReason) = _watchdog!.EvaluateSample(windowsPercent, onAcPower);
+                if (gaugeSus)
+                {
+                    inconsistent = true;
+                    reason = gaugeReason;
+                    if (_settingsService!.Current.NotificationsEnabled &&
+                        _settingsService.Current.NotifyGaugeWarnings)
+                        _notifications?.NotifyGaugeWarning(gaugeReason ?? "Battery gauge behaved impossibly.");
+                }
+                else
+                {
+                    _notifications?.ResetGaugeWarning();
+                }
             }
 
             snap = snap with
@@ -186,7 +218,12 @@ public partial class App : Application
 
             LatestSnapshot = snap;
 
-            _history!.Add(new HistoryPoint(DateTime.UtcNow, snap.EstimatedPercent, snap.PowerW));
+            // Graph the best percentage we have, so the "over time" chart works
+            // even where no independent estimate exists.
+            _history!.Add(new HistoryPoint(DateTime.UtcNow,
+                snap.EstimatedPercent ?? snap.CalculatedPercent ??
+                    (snap.WindowsReportedPercent.HasValue ? (double)snap.WindowsReportedPercent.Value : null),
+                snap.PowerW));
 
             _notifications?.EvaluateAndNotify(snap, _settingsService!.Current);
 
@@ -211,6 +248,7 @@ public partial class App : Application
         var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("Settings...", null, (_, _) => OpenSettings());
         menu.Items.Add("Reset battery learning data", null, (_, _) => { _engine?.ResetLearning(); });
+        menu.Items.Add("Reset gauge watchdog history", null, (_, _) => { _watchdog?.Reset(); });
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         menu.Items.Add("Exit", null, (_, _) => ExitApp());
         _trayIcon.ContextMenuStrip = menu;
@@ -227,6 +265,7 @@ public partial class App : Application
 
     public void ExitApp()
     {
+        _watchdog?.OnCleanExit();
         _settingsService?.Save();
         if (_trayIcon != null) _trayIcon.Visible = false;
         Shutdown();
@@ -235,6 +274,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _pollTimer?.Stop();
+        _watchdog?.OnCleanExit();
         _trayIcon?.Dispose();
         _singleInstanceMutex?.ReleaseMutex();
         base.OnExit(e);
