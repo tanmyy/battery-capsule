@@ -47,6 +47,45 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        DispatcherUnhandledException += (_, args) =>
+        {
+            LogCrash("DispatcherUnhandledException", args.Exception);
+            args.Handled = true;
+            MessageBox.Show("Battery Capsule ran into a problem on startup.\nDetails saved to:\n" + CrashLogPath,
+                "Battery Capsule", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown();
+        };
+
+        try
+        {
+            RunStartup();
+        }
+        catch (Exception ex)
+        {
+            LogCrash("OnStartup", ex);
+            MessageBox.Show("Battery Capsule could not start.\nDetails saved to:\n" + CrashLogPath,
+                "Battery Capsule", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown();
+        }
+    }
+
+    private static string CrashLogPath => System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "BatteryCapsule", "startup-crash.log");
+
+    private static void LogCrash(string where, Exception ex)
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CrashLogPath)!);
+            System.IO.File.AppendAllText(CrashLogPath,
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {where}:\n{ex}\n\n");
+        }
+        catch { /* logging must never crash the crash handler */ }
+    }
+
+    private void RunStartup()
+    {
         bool createdNew;
         _singleInstanceMutex = new System.Threading.Mutex(true, "BatteryCapsule_SingleInstance_Mutex", out createdNew);
         if (!createdNew)
