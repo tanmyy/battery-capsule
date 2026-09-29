@@ -84,6 +84,31 @@ public partial class App : Application
         catch { /* logging must never crash the crash handler */ }
     }
 
+    /// <summary>
+    /// Writes one line per launch with the raw values both battery sources report.
+    /// If the capsule ever says "no battery" on a machine that has one, this file
+    /// shows exactly which source came up empty.
+    /// </summary>
+    private void LogStartupDiagnostics()
+    {
+        try
+        {
+            bool psOk = GetSystemPowerStatus(out var status);
+            int deviceCount;
+            try { deviceCount = _reader!.ReadAll().Count; }
+            catch { deviceCount = -1; }
+
+            string dir = System.IO.Path.GetDirectoryName(CrashLogPath)!;
+            System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "diagnostics.log"),
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] GetSystemPowerStatus ok={psOk}, " +
+                $"ACLineStatus={status.ACLineStatus}, BatteryFlag={status.BatteryFlag}, " +
+                $"BatteryLifePercent={status.BatteryLifePercent}, BatteryLifeTime={status.BatteryLifeTime}; " +
+                $"battery device interfaces found={deviceCount}\n");
+        }
+        catch { /* diagnostics must never break startup */ }
+    }
+
     private void RunStartup()
     {
         bool createdNew;
@@ -107,6 +132,8 @@ public partial class App : Application
 
         Capsule = new CapsuleWindow();
         Capsule.Show();
+
+        LogStartupDiagnostics();
 
         _pollTimer = new DispatcherTimer
         {
