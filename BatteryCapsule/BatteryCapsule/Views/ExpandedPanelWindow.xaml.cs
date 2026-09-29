@@ -4,6 +4,9 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using BatteryCapsule.Models;
 using BatteryCapsule.Services;
+using Color = System.Windows.Media.Color;
+using FontFamily = System.Windows.Media.FontFamily;
+using Point = System.Windows.Point;
 
 namespace BatteryCapsule.Views;
 
