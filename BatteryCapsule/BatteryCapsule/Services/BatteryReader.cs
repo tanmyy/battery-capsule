@@ -203,6 +203,15 @@ public sealed class BatteryReader : IDisposable
             SetupDiDestroyDeviceInfoList(deviceInfoSet);
         }
 
+        if (results.Count == 0)
+        {
+            // Some firmware/drivers never expose the battery device interface
+            // (SetupAPI finds nothing) even though Windows itself sees the battery
+            // fine. In that case build the reading purely from WMI instead.
+            var wmiOnly = ReadFromWmiOnly();
+            if (wmiOnly != null) results.Add(wmiOnly);
+        }
+
         return results;
     }
 
@@ -354,6 +363,59 @@ public sealed class BatteryReader : IDisposable
         if (v == null) return null;
         try { return Convert.ToUInt32(v); }
         catch { return null; }
+    }
+
+    /// <summary>
+    /// Builds a battery reading purely from WMI, for machines where SetupAPI
+    /// enumeration finds no battery device interfaces at all. Win32_Battery is
+    /// the same driver data Windows' own battery UI uses, so this is Measured.
+    /// Voltage/rate aren't exposed here, so power-based stats (time remaining)
+    /// stay honestly N/A - but the percentage works.
+    /// </summary>
+    private static RawBatteryInfo? ReadFromWmiOnly()
+    {
+        try
+        {
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT EstimatedChargeRemaining, DesignCapacity, FullChargeCapacity, BatteryStatus, Chemistry FROM Win32_Battery");
+            foreach (ManagementObject mo in searcher.Get())
+            {
+                uint? pct = ToUInt(mo["EstimatedChargeRemaining"]);
+                uint? design = ToUInt(mo["DesignCapacity"]);
+                uint? full = ToUInt(mo["FullChargeCapacity"]);
+
+                if (!pct.HasValue)
+                {
+                    LastWmiSummary = "wmi-only: instance found but no charge reading";
+                    return null;
+                }
+
+                uint basis = full ?? design ?? 0;
+                var info = new RawBatteryInfo
+                {
+                    DeviceId = "WMI:Win32_Battery",
+                    DesignedCapacityMWh = design,
+                    FullChargedCapacityMWh = full,
+                    RemainingCapacityMWh = basis > 0
+                        ? (uint)Math.Round(basis * pct.Value / 100.0)
+                        : null,
+                    ChargeState = MapWmiBatteryStatus(ToUInt(mo["BatteryStatus"])),
+                    Chemistry = MapWmiChemistry(ToUInt(mo["Chemistry"])) ?? "",
+                    PowerLine = PowerLineStatus.Unknown,
+                    IsPresent = true,
+                };
+                LastWmiSummary = $"wmi-only: estRemaining={pct}, design={design?.ToString() ?? "null"}, " +
+                                 $"full={full?.ToString() ?? "null"}, status={ToUInt(mo["BatteryStatus"])?.ToString() ?? "null"}";
+                return info;
+            }
+            LastWmiSummary = "wmi-only: no Win32_Battery instances";
+            return null;
+        }
+        catch (Exception ex)
+        {
+            LastWmiSummary = $"wmi-only query failed: {ex.GetType().Name}";
+            return null;
+        }
     }
 
     private static ChargeState MapWmiBatteryStatus(uint? status) => status switch
