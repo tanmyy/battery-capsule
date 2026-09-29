@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>BatteryCapsule</AssemblyName>
+    <RootNamespace>BatteryCapsule</RootNamespace>
+    <Platforms>x64</Platforms>
+    <StartupObject>BatteryCapsule.App</StartupObject>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Icon is optional at build time; comment out ApplicationIcon above if you don't add one -->
+  </ItemGroup>
+
+</Project>
