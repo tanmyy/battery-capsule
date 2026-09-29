@@ -80,6 +80,17 @@ public partial class ExpandedPanelWindow : Window
 
         MetricsPanel.Children.Clear();
 
+        var watchdog = ((App)System.Windows.Application.Current).Watchdog;
+        AddRow("Gauge watchdog", watchdog.Verdict());
+        if (watchdog.SuspectDeaths.Count > 0)
+        {
+            int worst = watchdog.SuspectDeaths.Max(d => d.ReportedPercent);
+            var latest = watchdog.LatestDeath!;
+            AddRow("Sudden power losses", $"{watchdog.SuspectDeaths.Count} (worst: {worst}% on {latest.Utc:MMM d})");
+        }
+        if (watchdog.SuddenDropsSeen > 0)
+            AddRow("Impossible drops caught", watchdog.SuddenDropsSeen.ToString());
+
         if (snap.WindowsReportedPercent.HasValue && snap.EstimatedPercent.HasValue)
         {
             int diff = snap.EstimatedPercent.Value - snap.WindowsReportedPercent.Value;
