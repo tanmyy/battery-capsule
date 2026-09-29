@@ -14,7 +14,7 @@ public partial class App : Application
     /// Bump on every user-facing build so a diagnostics log always identifies
     /// exactly which build produced it.
     /// </summary>
-    public const string BuildTag = "2026-09-29-wmi1";
+    public const string BuildTag = "2026-09-29-wmi2";
     // --- Win32 GetSystemPowerStatus: the same call Windows' own taskbar battery icon
     // uses, so "WindowsReportedPercent" in the UI is genuinely what Windows itself shows. ---
     [StructLayout(LayoutKind.Sequential)]
