@@ -21,6 +21,7 @@ public sealed class AppSettings
     public bool NotifyLowTime { get; set; } = true;
     public bool NotifyReportedMismatch { get; set; } = false;
     public bool NotifyLowHealth { get; set; } = true;
+    public bool NotifyGaugeWarnings { get; set; } = true; // watchdog alerts: impossible drops, deaths at high charge
 }
 
 /// <summary>
