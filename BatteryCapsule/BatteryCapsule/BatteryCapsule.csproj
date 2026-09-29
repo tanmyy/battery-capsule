@@ -20,4 +20,9 @@
     <!-- Icon is optional at build time; comment out ApplicationIcon above if you don't add one -->
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- WMI fallback for batteries whose firmware doesn't answer the IOCTL queries -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
 </Project>
