@@ -10,6 +10,11 @@ namespace BatteryCapsule;
 
 public partial class App : Application
 {
+    /// <summary>
+    /// Bump on every user-facing build so a diagnostics log always identifies
+    /// exactly which build produced it.
+    /// </summary>
+    public const string BuildTag = "2026-09-29-wmi1";
     // --- Win32 GetSystemPowerStatus: the same call Windows' own taskbar battery icon
     // uses, so "WindowsReportedPercent" in the UI is genuinely what Windows itself shows. ---
     [StructLayout(LayoutKind.Sequential)]
@@ -101,10 +106,11 @@ public partial class App : Application
             string dir = System.IO.Path.GetDirectoryName(CrashLogPath)!;
             System.IO.Directory.CreateDirectory(dir);
             System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "diagnostics.log"),
-                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] GetSystemPowerStatus ok={psOk}, " +
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] build={BuildTag}, " +
+                $"GetSystemPowerStatus ok={psOk}, " +
                 $"ACLineStatus={status.ACLineStatus}, BatteryFlag={status.BatteryFlag}, " +
                 $"BatteryLifePercent={status.BatteryLifePercent}, BatteryLifeTime={status.BatteryLifeTime}; " +
-                $"battery device interfaces found={deviceCount}\n");
+                $"battery device interfaces found={deviceCount}; wmi: {BatteryReader.LastWmiSummary}\n");
         }
         catch { /* diagnostics must never break startup */ }
     }
