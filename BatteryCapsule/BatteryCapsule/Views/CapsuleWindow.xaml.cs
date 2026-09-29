@@ -56,6 +56,7 @@ public partial class CapsuleWindow : Window
         scale = Math.Clamp(scale, 0.8, 1.4);
         MainText.FontSize = 13 * scale;
         IconText.FontSize = 14 * scale;
+        CloseButton.FontSize = 10 * scale;
         PillBorder.Padding = new Thickness(12 * scale, 6 * scale, 12 * scale, 6 * scale);
     }
 
@@ -85,6 +86,17 @@ public partial class CapsuleWindow : Window
         MainText.Foreground = light
             ? (SolidColorBrush)app.Resources["CapsuleTextLight"]
             : (SolidColorBrush)app.Resources["CapsuleTextDark"];
+
+        CloseButton.Foreground = light
+            ? new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66))
+            : new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA));
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        // The Button marks the mouse events handled, so this won't also trigger
+        // the pill's click-to-open-panel or drag logic.
+        ((App)System.Windows.Application.Current).ExitApp();
     }
 
     private void OnSnapshotUpdated(BatterySnapshot snap)
